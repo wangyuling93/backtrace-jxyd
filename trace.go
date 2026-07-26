@@ -114,13 +114,23 @@ func (t *Tracer) NewSession(ip net.IP) (*Session, error) {
 }
 
 func (t *Tracer) init() {
+	var firstErr error
 	for _, network := range t.Networks {
 		t.conn, t.err = t.listen(network, t.Addr)
 		if t.err != nil {
+			if firstErr == nil {
+				firstErr = t.err
+			}
 			continue
 		}
 		go t.serve(t.conn)
 		return
+	}
+	if firstErr != nil {
+		t.err = firstErr
+	}
+	if t.err != nil {
+		t.err = errors.New(t.err.Error() + " (需要 root 权限，请用: sudo 或 curl ... | sudo sh)")
 	}
 }
 

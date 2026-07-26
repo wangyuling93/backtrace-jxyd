@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -e
 
 arch=$(uname -m)
 if [ "$arch" = "x86_64" ]; then
@@ -24,6 +24,9 @@ chmod +x backtrace
 # raw ICMP sockets need root (or CAP_NET_RAW)
 if [ "$(id -u)" -eq 0 ]; then
   ./backtrace
-else
+elif command -v sudo >/dev/null 2>&1; then
   sudo ./backtrace
+else
+  echo "需要 root 权限运行，请用: curl ... | sudo sh" >&2
+  exit 1
 fi

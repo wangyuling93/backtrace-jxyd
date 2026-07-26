@@ -13,7 +13,7 @@
 ## 使用
 
 ```shell
-curl https://raw.githubusercontent.com/wangyuling93/backtrace-jxyd/main/install.sh -sSf | sh
+curl https://cdn.jsdelivr.net/gh/wangyuling93/backtrace-jxyd@main/install.sh -sSf | sh
 ```
 
 ## 示例输出

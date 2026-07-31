@@ -9,7 +9,7 @@ import (
 func main() {
 
 	var (
-		s [19]string
+		s [18]string
 		c = make(chan Result)
 		t = time.After(time.Second * 10)
 	)

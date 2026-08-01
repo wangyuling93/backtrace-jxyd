@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/fatih/color"
+	"fmt"
 	"log"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 func main() {
@@ -33,7 +35,10 @@ loop:
 		}
 	}
 
-	for _, r := range s {
+	for i, r := range s {
+		if i > 0 && i%3 == 0 {
+			fmt.Println()
+		}
 		log.Println(r)
 	}
 }

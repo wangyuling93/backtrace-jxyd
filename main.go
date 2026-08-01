@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -37,7 +38,8 @@ loop:
 
 	for i, r := range s {
 		if i > 0 && i%3 == 0 {
-			fmt.Println()
+			// log 默认写 stderr；空行也走 stderr，避免与结果分流
+			fmt.Fprintln(os.Stderr)
 		}
 		log.Println(r)
 	}

@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"net"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 type Result struct {
@@ -30,7 +31,16 @@ var (
 		"江西电信", "江西移动", "江西联通",
 	}
 	ca = []color.Attribute{color.FgHiYellow, color.FgHiMagenta, color.FgHiBlue, color.FgHiGreen, color.FgHiCyan, color.FgHiRed, color.FgHiWhite}
-	m  = map[string]string{"AS4134": "电信163 [普通线路]", "AS4809": "电信CN2 [优质线路]", "AS4837": "联通4837[普通线路]", "AS9929": "联通9929[优质线路]", "AS9808": "移动CMI [普通线路]", "AS58453": "移动CMI [普通线路]", "AS58807": "移动CMIN2[优质线路]"}
+	m  = map[string]string{
+		"AS4134":     "电信163 [普通线路]",
+		"CN2GT":      "电信CN2GT[混合线路]",
+		"AS4809":     "电信CN2 [优质线路]",
+		"AS4837":     "联通4837[普通线路]",
+		"AS9929":     "联通9929[优质线路]",
+		"AS9808":     "移动CMI [普通线路]",
+		"AS58453":    "移动CMI [普通线路]",
+		"AS58807":    "移动CMIN2[优质线路]",
+	}
 )
 
 func trace(ch chan Result, i int) {
@@ -41,28 +51,76 @@ func trace(ch chan Result, i int) {
 		return
 	}
 
+	key := classifyPath(hops)
+	if key == "" {
+		s := fmt.Sprintf("%v %-15s %v", rName[i], rIp[i], "测试超时")
+		ch <- Result{i, s}
+		return
+	}
+
+	as := m[key]
+	var c *color.Color
+	switch {
+	case strings.Contains(as, "[优质线路]"):
+		c = color.New(color.FgHiGreen).Add(color.Bold)
+	case strings.Contains(as, "[混合线路]"):
+		c = color.New(color.FgHiCyan).Add(color.Bold)
+	default:
+		c = color.New(color.FgHiYellow).Add(color.Bold)
+	}
+	s := fmt.Sprintf("%v %-15s %-23s", rName[i], rIp[i], c.Sprint(as))
+	ch <- Result{i, s}
+}
+
+// classifyPath 扫描整条路径上的可识别 ASN，再按优先级判定。
+// 避免「首个前缀命中即 return」：例如先经 AS4134(218.30) 再经 59.43，
+// 旧逻辑会漏掉 163、误报纯 CN2；现改为 4134+4809 → CN2GT。
+func classifyPath(hops []*Hop) string {
+	seen := map[string]bool{}
+	var order []string
 	for _, h := range hops {
 		for _, n := range h.Nodes {
 			asn := ipAsn(n.IP.String())
-			if asn == "" {
+			if asn == "" || seen[asn] {
 				continue
-			} else {
-				as := m[asn]
-				var c *color.Color
-				if strings.Contains(as, "[优质线路]") {
-					c = color.New(color.FgHiGreen).Add(color.Bold)
-				} else {
-					c = color.New(color.FgHiYellow).Add(color.Bold)
-				}
-				s := fmt.Sprintf("%v %-15s %-23s", rName[i], rIp[i], c.Sprint(as))
-				ch <- Result{i, s}
-				return
-				}
+			}
+			seen[asn] = true
+			order = append(order, asn)
 		}
 	}
+	if len(order) == 0 {
+		return ""
+	}
 
-	s := fmt.Sprintf("%v %-15s %v", rName[i], rIp[i], "测试超时")
-	ch <- Result{i, s}
+	has := func(a string) bool { return seen[a] }
+
+	// 精品线优先（与常见 backtrace 系工具一致）
+	if has("AS9929") {
+		return "AS9929"
+	}
+	if has("AS58807") {
+		return "AS58807"
+	}
+	// 电信：163 入境后再进 CN2 → GT；仅 CN2 → GIA；仅 163 → 163
+	if has("AS4809") && has("AS4134") {
+		return "CN2GT"
+	}
+	if has("AS4809") {
+		return "AS4809"
+	}
+	if has("AS4134") {
+		return "AS4134"
+	}
+	if has("AS4837") {
+		return "AS4837"
+	}
+	if has("AS9808") {
+		return "AS9808"
+	}
+	if has("AS58453") {
+		return "AS58453"
+	}
+	return order[0]
 }
 
 func ipAsn(ip string) string {
@@ -73,7 +131,8 @@ func ipAsn(ip string) string {
 	switch {
 	case strings.HasPrefix(ip, "59.43"):
 		return "AS4809"
-	case strings.HasPrefix(ip, "202.97"):
+	// 电信 163：国际关口常见段（不止 202.97；如 218.30 出境跳）
+	case strings.HasPrefix(ip, "202.97"), strings.HasPrefix(ip, "218.30"):
 		return "AS4134"
 	case strings.HasPrefix(ip, "218.105"), strings.HasPrefix(ip, "210.51"):
 		return "AS9929"

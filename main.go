@@ -20,7 +20,7 @@ func main() {
 	head := color.New(color.FgHiBlue).Add(color.Bold).SprintFunc()
 	note := color.New(color.FgGreen).SprintFunc()
 	log.Println(head("项目地址：github.com/wangyuling93/backtrace-jxyd"))
-	log.Println(note("正在测试三网回程路由..."))
+	log.Println(note("正在测试三网回程路由（ICMP；与 TCP/UDP 可能不一致）..."))
 
 	for i := range rIp {
 		go trace(c, i)
